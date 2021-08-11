@@ -1,45 +1,56 @@
 package javapluginimpresoras;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 
 public class ImpresorasImprimirEnHandler implements HttpHandler {
     @Override
     public void handle(HttpExchange httpExchange) throws IOException {
+        // Respuestas
+        ServidorHttp.Respuestas laRespuesta = new ServidorHttp.Respuestas();
         // Tipo de peticion y headers
         ServidorHttp.HttpPeticionHeaders(httpExchange);
 
         if( ServidorHttp.METHOD_POST.equals( ServidorHttp.PETICION_TIPO ) ){
-            // Parametros POST
-            InputStream is = httpExchange.getRequestBody();
-            BufferedReader br = new BufferedReader(new InputStreamReader(is, ServidorHttp.CHARSET ));
-            StringBuilder content = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) { // br.readLine is always null!!!
-                content.append(line);
-                content.append("\n");
-            }
-            System.out.println("Content: " + content.toString());
+            // Parametros POST - Json Recibido
+            String JsonRequest = ServidorHttp.HttpRequestBodyGetJson( httpExchange ); // System.out.println("Contenido Json: " + JsonRequest );
+            JsonObject elJsonObject = new Gson().fromJson(JsonRequest, JsonObject.class);
+            //System.out.println( "JsonRequest: " + JsonRequest );
+            System.out.println( "elJsonObject: " + elJsonObject );
 
-            // Respuesta de tipo 200
-            ServidorHttp.RJsonCodigo = ServidorHttp.PETICION_ESTADO_OK;
-            ServidorHttp.RJsonEstado = "Ok";
-            ServidorHttp.RJsonMensaje = "El tipo de petición es correcta";
-            ServidorHttp.RJson = "{ \"laRespuesta\": { \"elCodigo\": "+ServidorHttp.RJsonCodigo+", \"elEstado\": \""+ServidorHttp.RJsonEstado+"\", \"elMensaje\": \""+ServidorHttp.RJsonMensaje+"\" }}";
+            // Validaciones del Json
+            // ¿Es un Json válido?
+            if( !elJsonObject.isJsonObject() ){
+                laRespuesta.setCodigo(ServidorHttp.PETICION_ESTADO_ERROR);
+                laRespuesta.setEstado("Error");
+                laRespuesta.setMensaje("Objeto Json no válido");
+            }
+            else{
+                // ¿Es un Json vacío?
+                if( elJsonObject.keySet().isEmpty() ){
+                    laRespuesta.setCodigo(ServidorHttp.PETICION_ESTADO_ERROR);
+                    laRespuesta.setEstado("Error");
+                    laRespuesta.setMensaje("Objeto Json vacío");
+                }
+                else{
+                    // Respuesta de tipo 200
+                    laRespuesta.setCodigo(ServidorHttp.PETICION_ESTADO_OK);
+                    laRespuesta.setEstado("Ok");
+                    laRespuesta.setMensaje("El tipo de petición es correcta");
+                }
+            }
         }
         else{
-            // Respuesta de tipo 405
-            ServidorHttp.RJsonCodigo = ServidorHttp.PETICION_ESTADO_ERROR;
-            ServidorHttp.RJsonEstado = "Error";
-            ServidorHttp.RJsonMensaje = "El tipo de petición ["+ServidorHttp.PETICION_TIPO+"] es incorrecta para este método";
-            ServidorHttp.RJson = "{ \"laRespuesta\": { \"elCodigo\": "+ServidorHttp.RJsonCodigo+", \"elEstado\": \""+ServidorHttp.RJsonEstado+"\", \"elMensaje\": \""+ServidorHttp.RJsonMensaje+"\" }}";
+            // Respuesta de tipo 403
+            laRespuesta.setCodigo(ServidorHttp.PETICION_ESTADO_ERROR);
+            laRespuesta.setEstado("Error");
+            laRespuesta.setMensaje("El tipo de petición ["+ServidorHttp.PETICION_TIPO+"] es incorrecta para este método");
         }
 
         // Respuesta al cliente
-        ServidorHttp.HttpResponse(httpExchange);
+        ServidorHttp.HttpResponse(httpExchange, laRespuesta);
     }
 }

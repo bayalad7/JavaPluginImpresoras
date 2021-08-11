@@ -10,29 +10,27 @@ import javax.print.PrintServiceLookup;
 public class ImpresorasListadoHandler implements HttpHandler {
     @Override
     public void handle(HttpExchange httpExchange) throws IOException {
+        // Respuestas
+        ServidorHttp.Respuestas laRespuesta = new ServidorHttp.Respuestas();
         // Tipo de peticion y headers
         ServidorHttp.HttpPeticionHeaders(httpExchange);
         
         if( ServidorHttp.METHOD_GET.equals( ServidorHttp.PETICION_TIPO ) ){
-            // Impresoras: Obtener el listado de las impresoras.
-            ArrayList<String> lasImpresoras = obtenerListaDeImpresoras();
-
             // Respuesta de tipo 200
-            ServidorHttp.RJsonCodigo = ServidorHttp.PETICION_ESTADO_OK;
-            ServidorHttp.RJsonEstado = "Ok";
-            ServidorHttp.RJsonMensaje = "El listado de las impresoras se cargo correctamente";
-            ServidorHttp.RJson = "{ \"laRespuesta\": { \"elCodigo\": "+ServidorHttp.RJsonCodigo+", \"elEstado\": \""+ServidorHttp.RJsonEstado+"\", \"elMensaje\": \""+ServidorHttp.RJsonMensaje+"\", \"lasImpresoras\": "+lasImpresoras+" }}";
+            laRespuesta.setCodigo(ServidorHttp.PETICION_ESTADO_OK);
+            laRespuesta.setEstado("Ok");
+            laRespuesta.setMensaje("El listado de las impresoras se cargo correctamente");
+            laRespuesta.setListadoImpresoras( obtenerListaDeImpresoras() ); // Impresoras: Obtener el listado de las impresoras de la computadora.
         }
         else{
-            // Respuesta de tipo 405
-            ServidorHttp.RJsonCodigo = ServidorHttp.PETICION_ESTADO_ERROR;
-            ServidorHttp.RJsonEstado = "Error";
-            ServidorHttp.RJsonMensaje = "El tipo de petición ["+ServidorHttp.PETICION_TIPO+"] es incorrecta para este método";
-            ServidorHttp.RJson = "{ \"laRespuesta\": { \"elCodigo\": "+ServidorHttp.RJsonCodigo+", \"elEstado\": \""+ServidorHttp.RJsonEstado+"\", \"elMensaje\": \""+ServidorHttp.RJsonMensaje+"\" }}";
+            // Respuesta de tipo 403
+            laRespuesta.setCodigo(ServidorHttp.PETICION_ESTADO_ERROR);
+            laRespuesta.setEstado("Error");
+            laRespuesta.setMensaje("El tipo de petición ["+ServidorHttp.PETICION_TIPO+"] es incorrecta para este método");
         }
 
         // Respuesta al cliente
-        ServidorHttp.HttpResponse(httpExchange);
+        ServidorHttp.HttpResponse(httpExchange, laRespuesta);
     }
 
     public static ArrayList<String> obtenerListaDeImpresoras()
@@ -42,7 +40,7 @@ public class ImpresorasListadoHandler implements HttpHandler {
         // Recorremos las impresoras.
         for (PrintService printer : printServices)
         {
-            lasImpresoras.add( '"'+ printer.getName() +'"' );
+            lasImpresoras.add( printer.getName() );
         }
         return lasImpresoras;
     }
